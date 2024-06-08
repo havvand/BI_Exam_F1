@@ -1,0 +1,17 @@
+# Business Intelligence Project
+
+## Problem Formulation
+Formula One produces vast amounts of data during qualifying, racing and testing. The data covers everything from driver performance metrics, telemetry, pit stops and weather conditions. 
+
+We want to apply BI and relevant methods we have learned to analyze Formula One data. We want to identify KPI’s that influence race outcomes and try predicting future race outcomes using Machine Learning/AI.
+
+### Research Questions
+1. We want to examine the driver data, race and lap times, qualifying times and pitstop times to determine which factors influence the outcome of races.
+2. We want to analyze historical (2018-2023) pitstop data to determine optimal pitstop windows based on different parameters e.g. track conditions, tire wear etc.
+3. Predict the impact of weather changes (rain, wind) on pace and pitstop strategy through models.
+4. Predictive Analytics: Develop models to predict race winners and exciting race moments to enhance fan engagement and viewership.
+
+#### Data Sources
+Kaggle: https://www.kaggle.com/rohanrao/formula-1-world-championship-1950-2020
+Ergast Developer API: https://ergast.com/mrd/
+FastF1 API: https://docs.fastf1.dev/index.html
