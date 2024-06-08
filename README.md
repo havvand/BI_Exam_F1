@@ -12,6 +12,6 @@ We want to apply BI and relevant methods we have learned to analyze Formula One 
 4. Predictive Analytics: Develop models to predict race winners and exciting race moments to enhance fan engagement and viewership.
 
 #### Data Sources
-Kaggle: https://www.kaggle.com/rohanrao/formula-1-world-championship-1950-2020
-Ergast Developer API: https://ergast.com/mrd/
-FastF1 API: https://docs.fastf1.dev/index.html
+1. Kaggle: https://www.kaggle.com/rohanrao/formula-1-world-championship-1950-2020
+2. Ergast Developer API: https://ergast.com/mrd/
+3. FastF1 API: https://docs.fastf1.dev/index.html
