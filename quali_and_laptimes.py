@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# Qualifying and Laptime data will be analysed in the following. Starting with loading, cleaning and then exploration #
+# Qualifying and lap time data will be analysed in the following. Starting with loading, cleaning and then exploration.
+
 quali_data = pd.read_csv('data/qualifying.csv')
 
 # Cleaning the qualifying data.
@@ -23,6 +24,7 @@ quali_data_2018_2023.loc[:, 'q3'] = quali_data_2018_2023['q3'].replace('\\N', np
 quali_data_2018_2023.notnull().sum()
 
 # Converting all time-data to milliseconds
+
 def convert_time_to_ms(time_str):
     if pd.isna(time_str):
         return np.nan
@@ -41,10 +43,12 @@ for column in ['q1', 'q2', 'q3']:
 
 #%% Seperating the data into Seasons 2018-2023
 
-# We decided to divide the data into seasons, to get a better understanding of the performance of the drivers across the seasons.
-# This allows for a more detailed analysis of the data and the performance of the drivers. Because circumstances can change from season to season.
-# Improvements and changes in the cars, drivers and teams can be better understood by looking at the data in this way.
-# Identifying outliers and applying statistical methods will be more robust when done by seasons.
+''' TEXT 
+We decided to divide the data into seasons, to get a better understanding of the performance of the drivers across the seasons.
+This allows for a more detailed analysis of the data and the performance of the drivers. Because circumstances can change from season to season.
+Improvements and changes in the cars, drivers and teams can be better understood by looking at the data in this way.
+Identifying outliers and applying statistical methods will be more robust when done by seasons
+'''
 
 year_intervals = {
     2018: (989, 1009),
@@ -67,19 +71,6 @@ for year, (start, end) in year_intervals.items():
 
 df_2018_quali = dataframes[2018]
 
-#-------------------------------------            TEXT              -------------------------------------------
-
-# The Boxplot for Q1 shows that the IQR (Inter Quartile Range - 50% of data) falls between 75,000 and 95,000 milliseconds.
-# This suggests, that drivers across the grid exhibit similar performance within this range, and half their laps falls
-# within this range.
-#
-# However, in Formula One even ms can make a significant difference in grid positions. Looking at the median for the drivers
-# we see a large difference between drivers.#
-
-# The STD is 11.37 seconds, which is quite high. This shows us, that on average the individual lap times deviate from the mean by 11.37 seconds.
-# This is a significant amount of time in Formula One, where the difference between pole position and 10th place can be less than a second.
-# The hihgh STD can be explained by the fact we are looking at the whole season, and we cant include weather conditions, track conditions, car performance etc.
-
 #%% Exploration and anaylsis of the quali_data_2018-2023 - Histogram of Q1, Q2 and Q3 times to explore the distribution of the data
 print(quali_data_2018_2023.describe())
 
@@ -89,15 +80,17 @@ sns.histplot(df_2018_quali['q1'], bins=47, ax=axs[0])
 sns.histplot(df_2018_quali['q2'], bins=47, ax=axs[1])
 sns.histplot(df_2018_quali['q3'], bins=47, ax=axs[2])
 
-# Based on the histograms, we can see the data is not normally distributed across Q1, Q2 and Q3.
-# The data is multi-modal, which suggests that there are distinct subgroups within the data.
-# This seems to indicate numerous distinct subgroups. Top-Performers and Low-Performers seperated by the Mid-Performers.
-# Some outliers are also clearly identified in the data, which can be removed to get a more accurate picture of the data.
+''' TEXT 
+Based on the histograms, we can see the data is not normally distributed across Q1, Q2 and Q3.
+The data is multi-modal, which suggests that there are distinct subgroups within the data.
+The indication of distinct subgroups could be due to various factors llike skill, track conditions or strategy..
+Some outliers are also clearly identified in the data, which can be removed to get a more accurate picture of the data.
+'''
 
 #%% Further investigation of histogram. Removing outliers and calculating the IQR for Q1, Q2 and Q3 times
 
-# Removing outliers, based on the histogram above 120,000 ms and below 54,000 ms
-# This gives a more accurate picture of the performances and a more accurate Standard Deviation
+# Removing outliers, based on the histogram above 120,000 ms and below 54,000 ms. This gives a more accurate picture of the performances and a more accurate Standard Deviation
+
 df_2018_quali = df_2018_quali[((df_2018_quali['q1'].isna()) | ((df_2018_quali['q1'] <= 106000) & (df_2018_quali['q1'] >= 53000))) &
                               ((df_2018_quali['q2'].isna()) | ((df_2018_quali['q2'] <= 106000) & (df_2018_quali['q2'] >= 53000))) &
                               ((df_2018_quali['q3'].isna()) | ((df_2018_quali['q3'] <= 106000) & (df_2018_quali['q3'] >= 53000)))]
@@ -137,13 +130,26 @@ axs[2].fill_betweenx([0, plt.gca().get_ylim()[1]], Q1R3_q1, Q1R3_q3, color='red'
 plt.title('Histogram of Q1, Q2 and Q3 times')
 plt.ylabel('Frequency')
 
-# The IQR for Q1, Q2 and Q3 are 18,3ms 19.7ms and 19.7ms respectively. Across the qualifying rounds, 50% percent
-# of the drivers fall within this range.
-# Q1 Shows the widest range of laptimes, with some slow outliers. Q2 and Q3 show a more narrow range of laptimes.
-# Q2 and Q3 are more competitive, with the fastest drivers in the grid competing for the top positions.
+''' TEXT 
+The IQR for Q1, Q2 and Q3 are 18,3ms 19.7ms and 19.7ms respectively.
 
-# To gain insights into the subgroups, we can use clustering techniques to group the drivers based on their Q1, Q2 and Q3 times.
+The Historgram for Q1 shows that the inter quartile range (IQR) which represents 50% of Q1 lap times, falls between 75,835 and 94,140 milliseconds.
+This suggests, that a significant portion of drivers across the grid exhibit similar performance within this range, with half their laps in this range.
 
+18+ seconds are quite significant in Formula One, where the difference between pole position and 10th place can be less than a second. Due to the fact
+that we are looking at the whole season, we cant include weather conditions, track conditions, car performance etc., which can explain the high IQR.
+
+The STD is 11.37 seconds, which is also quite high. This shows us, that on average the individual lap times deviate from the mean by 11.37 seconds.
+Again a significant amount of time in Formula One. The high STD can also be explained by the fact we are looking at the whole season.
+
+Taking into consideration we are looking at a whole season, we can still gain insights into the performance of the drivers and the grid as a whole.
+
+E.g. Q1 Shows the widest range of laptimes, with some slow outliers. This can be due to warm-up laps, traffic or other factors.
+Q2 and Q3 show a more narrow range of lap times, which is expected, as the drivers are pushing for the best possible lap times. 
+Q2 and Q3 are more competitive, with the fastest drivers in the grid competing for the top positions.
+
+To gain insights into the subgroups, we can use clustering techniques to group the drivers based on their Q1, Q2 and Q3 times.
+'''
 plt.show()
 
 #%% Collecting all the data for driver qualifying times in 2018
@@ -151,22 +157,46 @@ driver_quali_times = df_2018_quali.groupby('driverId')[['driverId', 'raceId', 'q
 driver_quali_times['driverId_cat'] = pd.Categorical(driver_quali_times['driverId']).codes
 
 #%% Calulating the mean and standard deviation for Q1, Q2 and Q3 times and plotting the data in a scatterplot
-# The scatterplot shows the distribution of the data and the mean for each Q1, Q2 and Q3 times.
-# This visualises each drivers performance across the season and allows for a comparison of the drivers.
-mean_q1 = quali_data_2018_2023['q1'].mean()
+''' TEXT 
+The scatterplot shows the distribution of the data and the mean for each Q1, Q2 and Q3 times.
+This visualises each drivers performance across the season and allows for a comparison of the drivers.
+Note: There i no mode in the data, being that no lap time is repeated. - The data is amodal. '''
+
+race_989 = df_2018_quali[df_2018_quali['raceId'] == 989]
+race_990 = df_2018_quali[df_2018_quali['raceId'] == 990]
+mean_990 = race_990['q1'].mean()
+mean_989 = race_989['q1'].mean()
+print('989', mean_989)
+
+
+mean_q1 = df_2018_quali['q1'].mean()
 print('Mean Q1:', mean_q1)
+median_q1 = df_2018_quali['q1'].median()
+print('Median Q1:', median_q1)
 std_deviation_q1 = df_2018_quali['q1'].std()
 print('Std Deviation Q1:', std_deviation_q1)
+standard_error_q1 = df_2018_quali['q1'].sem()
+print('Standard Error:', standard_error_q1)
 
-mean_q2 = quali_data_2018_2023['q2'].mean()
+
+mean_q2 = df_2018_quali['q2'].mean()
 print('Mean Q2:', mean_q2)
+median_q2 = df_2018_quali['q2'].median()
+print('Median Q2:', median_q2)
 std_deviation_q2 = df_2018_quali['q2'].std()
 print('Std Deviation Q2:', std_deviation_q2)
+standard_error_q2 = df_2018_quali['q2'].sem()
+print('Standard Error:', standard_error_q2)
 
-mean_q3 = quali_data_2018_2023['q3'].mean()
+
+mean_q3 = df_2018_quali['q3'].mean()
 print('Mean Q3:', mean_q3)
+median_q3 = df_2018_quali['q3'].median()
+print('Median Q3:', median_q3)
 std_deviation_q3 = df_2018_quali['q3'].std()
 print('Std Deviation Q3:', std_deviation_q3)
+standard_error_q3 = df_2018_quali['q3'].sem()
+print('Standard Error:', standard_error_q3)
 
 race_ids = df_2018_quali['raceId'].unique()
 driver_ids = df_2018_quali['driverId'].unique()
@@ -179,6 +209,8 @@ sns.scatterplot(x='driverId_cat', y='q2', data=driver_quali_times, ax=axs[1], hu
 sns.scatterplot(x='driverId_cat', y='q3', data=driver_quali_times, ax=axs[2], hue='raceId', palette=color_map1)
 
 axs[0].axhline(y=mean_q1, color='r', linestyle='--')
+axs[0].axhline(y=mean_989, color='r', linestyle='-.')
+axs[0].axhline(y=mean_990, color='orange', linestyle='-.')
 axs[1].axhline(y=mean_q2, color='r', linestyle='--')
 axs[2].axhline(y=mean_q3, color='r', linestyle='--')
 
@@ -223,7 +255,7 @@ plt.show()
 #%% Boxplot of Q1, Q2 and Q3 times
 from sklearn.mixture import GaussianMixture
 
-gmm = GaussianMixture(n_components=5)
+gmm = GaussianMixture(n_components=10)
 reshape = np.reshape(df_2018_quali['q1'].values, (-1, 1))
 gmm.fit(reshape)
 
@@ -235,13 +267,27 @@ print('Means:', means)
 print('Variances:', variances)
 print('Weights:', weights)
 
+# Testing for the optimal number of components - According to BIC and AIC the optimal number of components is 10.
+# The BIC and AIC values are the lowest for 10 components, but knowing the data, we can see that 10 components is too few.
+'''for i in range(1, gmm.n_components+1):
+    gmm = GaussianMixture(n_components=i)
+    reshape = np.reshape(df_2018_quali['q1'].values, (-1, 1))
+    gmm.fit(reshape)
+    bic =  gmm.bic(reshape)
+    print('BIC for: ', i, ' components ',  bic)
+    aic = gmm.aic(reshape)
+    print('AIC for : ',i , ' components ' , aic)'''
+
+
 #%% Plotting the KDE plot or histogram with the GMM components
-# The GMM components are plotted on top of the KDE plot or histogram to show the distribution of the data and the components.
-# This tells us, that the data is not normally distributed and that there are distinct subgroups in the data.
-# Based on a visual inspection, there are around 5 subgroups in the data, which can be further analysed using clustering techniques.
-# Where the curve is low, we see less probability of the data being in that range.
-# As expected the curve is low around the fastest and slowest speeds. This is because there are fewer drivers in these ranges.
-#
+''' TEXT 
+The GMM components are plotted on top of the KDE plot or histogram to show the distribution of the data and the components.
+This tells us, that the data is not normally distributed and that there are distinct subgroups in the data.
+Based on a visual inspection, there are around 5 subgroups in the data, which can be further analysed using clustering techniques.
+Where the curve is low, we see less probability of the data being in that range.
+As expected the curve is low around the fastest and slowest speeds. This is because there are fewer drivers in these ranges.
+'''
+
 from scipy.stats import norm
 # Generate the KDE plot or histogram. Bins set by Squareroot of the number of data points
 sns.histplot(df_2018_quali['q1'], bins=20, kde=True)
@@ -263,41 +309,92 @@ plt.xlabel('Time in milliseconds')
 plt.ylabel('Frequency')
 plt.show()
 
+#%% K-Means Clustering
+''' TEXT
+Inspecting the clusters - starting with 10 clusters - of the data using K-Means clustering, we can quickly identify a patteren. 
+The data seems to fit with the different tracks which is used in the season. Dividing them into 20 clusters, seems to fit well with the data. 
+
+The Silhouette Score and Calinski Harabasz Score are used to evaluate the clustering. The Silhouette Score is above the threshold of 0.5, which is good.
+The Calinski Harabasz Score is also above the threshold of 1000, which is good. This indicates that the clusters are well separated and that the data fits well with the clusters.
+The Davies Bouldin Score is also used to evaluate the clustering. The score is below 0.5, which is good. This indicates that the clusters are well separated and that the data fits well with the clusters.
+
+The metrics seems to indicate that the clustering is good and that the data fits well with the clusters and each cluster cooresponds to a different track.
+'''
+
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.metrics import calinski_harabasz_score
+from sklearn.metrics import davies_bouldin_score
+
+df_2018_quali = df_2018_quali.dropna(subset=['q1'])
+kmeans = KMeans(n_clusters=20)
+reshape = np.reshape(df_2018_quali['q1'].values, (-1, 1))
+kmeans.fit(reshape)
+df_2018_quali['cluster'] = kmeans.predict(reshape)
+
+silhouette_avg = silhouette_score(reshape,  df_2018_quali['cluster'])
+print('Silhouette Score:', silhouette_avg)
+
+chi_score = calinski_harabasz_score(reshape, df_2018_quali['cluster'])
+print('Calinski Harabasz Score:', chi_score)
+
+db_score = davies_bouldin_score(reshape, df_2018_quali['cluster'])
+print('Davies Bouldin Score:', db_score)
+
+# Plot the clusters
+plt.scatter(df_2018_quali['q1'], df_2018_quali['q2'], c=df_2018_quali['cluster'], cmap='viridis')
+plt.xlabel('Q1 Time')
+plt.ylabel('Q2 Time')
+plt.title('K-Means Clustering of Q1 and Q2 times')
+
 #%%
+import plotly.graph_objects as go
+import plotly.offline as pyo
 
+# Create a trace for the scatter plot
+trace = go.Scatter(
+    x = df_2018_quali['q1'],
+    y = df_2018_quali['q2'],
+    mode = 'markers',
+    marker = dict(
+        size = 10,
+        color = df_2018_quali['cluster'], # set color equal to a variable
+        colorscale = 'Viridis', # one of plotly colorscales
+        showscale = True
+    ),
+    text = df_2018_quali.raceId.astype(str) + '<br>' + 'DriverID: '+  df_2018_quali.driverId.astype(str) # This will be displayed when you hover over a point
+)
 
+# Create a trace for the scatter plot for Q3
+trace2 = go.Scatter(
+    x = df_2018_quali['q1'],
+    y = df_2018_quali['q3'],
+    mode = 'markers',
+    marker = dict(
+        size = 10,
+        color = df_2018_quali['cluster'], # set color equal to a variable
+        colorscale = 'Viridis', # one of plotly colorscales
+        showscale = True
+    ),
+    text = df_2018_quali.raceId.astype(str) + '<br>' + 'DriverID: ' + df_2018_quali.driverId.astype(str) + '<br>' + 'Q3', # This will be displayed when you hover over a point
+    name = 'Q1 vs Q3'
+)
 
-results_data = pd.read_csv('data/results.csv')
-results_data.drop(['time'], inplace=True, axis=1)
-results_data['positionText'] = results_data['positionText'].replace({'R': 0, 'D': 00})
-results_data[['raceId', 'driverId', 'constructorId', 'grid', 'position', 'positionOrder', 'points', 'laps', 'milliseconds',
-              'fastestLap', 'rank', 'fastestLapTime', 'fastestLapSpeed']] = results_data[['raceId', 'driverId', 'constructorId', 'grid', 'position', 'positionOrder', 'points', 'laps', 'milliseconds', 'fastestLap', 'rank', 'fastestLapTime', 'fastestLapSpeed']].replace('\\N', np.nan)
+data = [trace, trace2]
 
-test = pd.merge(quali_data, results_data, on=['raceId', 'driverId', 'constructorId'])
-test.drop(['number_x'], inplace=True, axis=1)
-test.rename(columns={'number_y': 'car_number'}, inplace=True)
+# Create the layout
+layout = go.Layout(
+    title = 'K-Means Clustering of Q1 and Q2 times',
+    xaxis = dict(title = 'Q1 Time'),
+    yaxis = dict(title = 'Q2 and Q3 Time'),
+    hovermode = 'closest'
+)
 
-def convert_time_to_ms(time_str):
-    if pd.isna(time_str):
-        return np.nan
-    if ':' not in time_str:
-        return None
-    mins, time = time_str.split(':')
-    if '.' not in time:
-        secs = time
-        ms = 0
-    secs, ms = time.split('.')
-    return (float(mins) * 60 + float(secs)) * 1000 + float(ms)
+# Create the figure and add the scatter plot
+fig = go.Figure(data=data, layout=layout)
 
-
-for column in ['q1', 'q2', 'q3']:
-    test[column] = test[column].apply(convert_time_to_ms)
-
-#%%
-
-#%%
-sns.boxplot(x='raceId', y='q1', data=quali_data)
-plt.show()
+# Show the plot
+pyo.plot(fig)
 
 #%%
 test_heatmap = test.loc[test['raceId'] == 1106]
