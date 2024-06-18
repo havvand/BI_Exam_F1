@@ -7,8 +7,8 @@ We want to apply BI and relevant methods we have learned to analyze Formula One 
 
 ### Research Questions
 1. We want to examine the driver data, race and lap times, qualifying times and pitstop times to determine which factors influence the outcome of races.
-2. We want to analyze historical (2018-2023) pitstop data to determine optimal pitstop windows based on different parameters e.g. track conditions, tire wear etc.
-3. Predict the impact of weather changes (rain, wind) on pace and pitstop strategy through models.
+2. Analyze historical (2018-2023) pitstop data to identify general trends and patterns in optimal pitstop windows, independent of specific race conditions.
+3. Predict the impact of weather changes (rain) on pace and pitstop strategy through models.
 4. Predictive Analytics: Develop models to predict race winners and exciting race moments to enhance fan engagement and viewership.
 
 #### Data Sources
