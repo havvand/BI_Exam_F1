@@ -31,38 +31,38 @@ for year, (start, end) in year_intervals.items():
     dataframes[year] = race_data_2018_2023[(race_data_2018_2023['raceId'] >= start) & (race_data_2018_2023['raceId'] <= end)]
 
 #%%
-df_race_2018 = dataframes[2018]
+df_race_2022 = dataframes[2022]
 
 
 #%% Histogram to show the distribution of the lap times
 fig, axs = plt.subplots(1, 1, figsize=(30, 20))
-sns.histplot(df_race_2018['milliseconds'], bins=150)
+sns.histplot(df_race_2022['milliseconds'], bins=150)
 plt.xticks(np.arange(66000, 200000, 10000))
 
 ''' TEXT 
 Based on the histograms, we can see the race data is not normally distributed across across the season.
-The data seems to be bimodal, which suggests that there are two distinct subgroups within the data.
+The data seems to be multimodal, which suggests that there are two distinct subgroups within the data.
 The indication of distinct subgroups could be due to various factors llike skill, track conditions or strategy..
 '''
 
 #%% Further analysis of the data to identify potential outliers.
 
-print(df_race_2018.describe())
+print(df_race_2022.describe())
 
 '''TEXT
-The histogram and the describe functions both show, that there is an outlier at +500000 milliseconds and potientially at around 200000 milliseconds.
+The histogram and the describe functions both show, that there is an outlier at +300000 milliseconds and potientially at around 200000 milliseconds.
 '''
 
-df_race_2018 = df_race_2018[(df_race_2018['milliseconds'] <= 200000) & (df_race_2018['milliseconds'] >= 66000)]
+df_race_2022 = df_race_2022[(df_race_2022['milliseconds'] <= 200000) & (df_race_2022['milliseconds'] >= 66000)]
 
 fig, axs = plt.subplots(1, 1, figsize=(30, 20))
-sns.histplot(df_race_2018['milliseconds'], bins=150)
+sns.histplot(df_race_2022['milliseconds'], bins=150)
 plt.xticks(np.arange(66000, 200000, 1000))
 
-df_race_2018.describe()
+df_race_2022.describe()
 
-Q1 = df_race_2018['milliseconds'].quantile(0.25)
-Q3 = df_race_2018['milliseconds'].quantile(0.75)
+Q1 = df_race_2022['milliseconds'].quantile(0.25)
+Q3 = df_race_2022['milliseconds'].quantile(0.75)
 IQR = Q3 - Q1
 print(Q1, Q3, IQR)
 axs.fill_betweenx([0, 1000], Q1, Q3, color='red', alpha=0.3)
@@ -70,18 +70,21 @@ axs.fill_betweenx([0, 1000], Q1, Q3, color='red', alpha=0.3)
 
 
 #%% Extracting the driver data
-driver_race_times = df_race_2018.groupby('driverId')[['driverId', 'raceId', 'lap','milliseconds']].apply(lambda x: x)
-driver_race_times['driverId_cat'] = pd.Categorical(df_race_2018['driverId']).codes
+driver_race_times = df_race_2022.groupby('driverId')[['driverId', 'raceId', 'lap', 'milliseconds']].apply(lambda x: x)
+driver_race_times['driverId_cat'] = pd.Categorical(df_race_2022['driverId']).codes
 
 #%%
-track_stats = df_race_2018.groupby('raceId')['milliseconds'].agg(['mean', 'std', 'min', 'max'])
+''' TEXT
+ The threshold is set to 3 times the standard deviation for each race. This is a common method to identify outliers in a dataset.
+'''
+track_stats = df_race_2022.groupby('raceId')['milliseconds'].agg(['mean', 'std', 'min', 'max'])
 threshold = 3
 driver_race_times['outlier'] = driver_race_times.apply(lambda x: x['milliseconds'] > track_stats.loc[x['raceId']]['mean'] + threshold * track_stats.loc[x['raceId']]['std'], axis=1)
 
 
 #%% Scatterplot
-race_ids = df_race_2018['raceId'].unique()
-driver_ids = df_race_2018['driverId'].unique()
+race_ids = df_race_2022['raceId'].unique()
+driver_ids = df_race_2022['driverId'].unique()
 colors = sns.color_palette('hsv', len(race_ids))
 color_map1 = dict(zip(race_ids, colors))
 fig, axs = plt.subplots(1, 1, figsize=(30, 20))
@@ -94,6 +97,9 @@ axs.set_xticklabels(driver_ids)
 plt.show()
 
 #%%
+''' TEXT
+Removing outliers from the data to get a better understanding of the distribution of the lap times.
+'''
 driver_race_times_no_outliers = driver_race_times[driver_race_times['outlier'] == False]
 fig, axs = plt.subplots(1, 1, figsize=(30, 20))
 sns.scatterplot(x='driverId_cat', y='milliseconds', data=driver_race_times_no_outliers, palette=color_map1)
@@ -106,7 +112,7 @@ fig, axs = plt.subplots(1, 1, figsize=(30, 20))
 sns.histplot(driver_race_times_no_outliers['milliseconds'], bins=150)
 plt.xticks(np.arange(66000, 200000, 1000))
 
-df_race_2018.describe()
+df_race_2022.describe()
 
 Q1 = driver_race_times_no_outliers['milliseconds'].quantile(0.25)
 Q3 = driver_race_times_no_outliers['milliseconds'].quantile(0.75)
@@ -222,7 +228,7 @@ fig = go.Figure(data=[trace], layout=layout)
 
 # Show the plot
 # Show the plot
-pyo.plot(fig, filename='race_data_2018_kmeans.html')
+pyo.plot(fig)
 
 #%%
 ''' Text 
@@ -241,45 +247,27 @@ driver_race_times_no_outliers = pd.merge(driver_race_times_no_outliers, fastest_
 driver_race_times_no_outliers['normalized_lap'] = driver_race_times_no_outliers['milliseconds'] / driver_race_times_no_outliers['fastest_lap']
 
 #%%
-from sklearn.neighbors import NearestNeighbors
-import matplotlib.pyplot as plt
-
-# Reshape the 'normalized_lap' values
-normalized_lap_values = np.reshape(driver_race_times_no_outliers['normalized_lap'].values, (-1, 1))
-
-# Use the NearestNeighbors class to find the k-nearest neighbors
-nearest_neighbors = NearestNeighbors(n_neighbors=4)  # Change the value of n_neighbors to the k value you want
-nearest_neighbors.fit(normalized_lap_values)
-
-# Get the distances and indices of the k-nearest neighbors for each point
-distances, indices = nearest_neighbors.kneighbors(normalized_lap_values)
-
-# Get the distances to the kth nearest neighbor for each point
-kth_distances = distances[:, -1]
-
-# Sort the distances
-kth_distances = np.sort(kth_distances, axis=0)
-
-# Create the k-distance plot
-plt.figure(figsize=(10, 7))
-plt.plot(kth_distances)
-plt.title('K-Distance Plot')
-plt.xlabel('Points sorted by distance to kth nearest neighbor')
-plt.ylabel('kth nearest neighbor distance')
-plt.show()
-#%%
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import calinski_harabasz_score
 from sklearn.metrics import davies_bouldin_score
 from matplotlib.ticker import MaxNLocator
-
+'''TEXT
+The KMEANS method is not the best for this type of data, being it is not globular. But after trying DBSCAN (with no meaningful results) and Agglomerative Clustering, 
+KMEANS was the best option
+seemed to be the best option for this data (also based on my computer's processing power).
+With scores of ;
+Silhouette Score: 0.5187184151647128
+Calinski Harabasz Score: 284750.47088383586
+Davies Bouldin Score: 0.5163528093538814
+It seems like a good clustering result, but it is important to remember that the data is not globular and the clusters are not too well-separated.
+'''
 # Create a mapping from 'driverId_cat' to 'driverId'
 driverId_mapping = dict(zip(driver_race_times_no_outliers['driverId_cat'], driver_race_times_no_outliers['driverId']))
 # Create a new column 'driverId_cat' that represents the categorical version of 'driverId'
 driver_race_times_no_outliers['driverId_cat'] = pd.Categorical(driver_race_times_no_outliers['driverId']).codes
 
-kmeans = KMeans(n_clusters=17)
+kmeans = KMeans(n_clusters=16)
 reshape = np.reshape(driver_race_times_no_outliers['normalized_lap'].values, (-1, 1))
 kmeans.fit(reshape)
 driver_race_times_no_outliers['cluster'] = kmeans.predict(reshape)
