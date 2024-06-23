@@ -67,9 +67,17 @@ IQR = Q3 - Q1
 print(Q1, Q3, IQR)
 axs.fill_betweenx([0, 1000], Q1, Q3, color='red', alpha=0.3)
 
+
+
 #%% Extracting the driver data
-driver_race_times = df_race_2018.groupby('driverId')[['driverId', 'raceId', 'milliseconds''']].apply(lambda x: x)
+driver_race_times = df_race_2018.groupby('driverId')[['driverId', 'raceId', 'lap','milliseconds']].apply(lambda x: x)
 driver_race_times['driverId_cat'] = pd.Categorical(df_race_2018['driverId']).codes
+
+#%%
+track_stats = df_race_2018.groupby('raceId')['milliseconds'].agg(['mean', 'std', 'min', 'max'])
+threshold = 3
+driver_race_times['outlier'] = driver_race_times.apply(lambda x: x['milliseconds'] > track_stats.loc[x['raceId']]['mean'] + threshold * track_stats.loc[x['raceId']]['std'], axis=1)
+
 
 #%% Scatterplot
 race_ids = df_race_2018['raceId'].unique()
@@ -77,12 +85,34 @@ driver_ids = df_race_2018['driverId'].unique()
 colors = sns.color_palette('hsv', len(race_ids))
 color_map1 = dict(zip(race_ids, colors))
 fig, axs = plt.subplots(1, 1, figsize=(30, 20))
-sns.scatterplot(x='driverId_cat', y='milliseconds', data=driver_race_times, hue='raceId', palette=color_map1)
+
+sns.scatterplot(x='driverId_cat', y='milliseconds', c=driver_race_times['outlier'], data=driver_race_times, hue='outlier')
 
 axs.set_xticks(range(len(driver_ids)))
 axs.set_xticklabels(driver_ids)
 
 plt.show()
+
+#%%
+driver_race_times_no_outliers = driver_race_times[driver_race_times['outlier'] == False]
+fig, axs = plt.subplots(1, 1, figsize=(30, 20))
+sns.scatterplot(x='driverId_cat', y='milliseconds', data=driver_race_times_no_outliers, palette=color_map1)
+axs.set_xticks(range(len(driver_ids)))
+axs.set_xticklabels(driver_ids)
+plt.show()
+
+#%%
+fig, axs = plt.subplots(1, 1, figsize=(30, 20))
+sns.histplot(driver_race_times_no_outliers['milliseconds'], bins=150)
+plt.xticks(np.arange(66000, 200000, 1000))
+
+df_race_2018.describe()
+
+Q1 = driver_race_times_no_outliers['milliseconds'].quantile(0.25)
+Q3 = driver_race_times_no_outliers['milliseconds'].quantile(0.75)
+IQR = Q3 - Q1
+print(Q1, Q3, IQR)
+axs.fill_betweenx([0, 1000], Q1, Q3, color='red', alpha=0.3)
 
 #%%
 import matplotlib.pyplot as plt
@@ -92,7 +122,7 @@ from scipy.stats import gaussian_kde
 # Calculate the KDE
 kde = gaussian_kde(driver_race_times['milliseconds'])
 kde.set_bandwidth(bw_method=kde.factor / 2)
-x = np.linspace(driver_race_times['milliseconds'].min(), driver_race_times['milliseconds'].max(), 1000)
+x = np.linspace(driver_race_times_no_outliers['milliseconds'].min(), driver_race_times_no_outliers['milliseconds'].max(), 1000)
 
 # Find the local maxima
 local_maxima = argrelextrema(kde(x), np.greater)
@@ -112,39 +142,161 @@ plt.legend()
 plt.show()
 
 #%%
-''' Text
-Being that the data is non-globular and K-Means is not the best clustering algorithm for this data, we try with DBSCAN or Hierarchical Clustering.
-Heirarchical clustering is a type of unsupervised machine learning algorithm used to cluster unlabeled data points.
-'''
-from sklearn.cluster import DBSCAN
-from sklearn.preprocessing import StandardScaler
+from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.metrics import calinski_harabasz_score
 from sklearn.metrics import davies_bouldin_score
+from matplotlib.ticker import MaxNLocator
+# Create a mapping from 'driverId_cat' to 'driverId'
+driverId_mapping = dict(zip(driver_race_times_no_outliers['driverId_cat'], driver_race_times_no_outliers['driverId']))
+# Create a new column 'driverId_cat' that represents the categorical version of 'driverId'
+driver_race_times_no_outliers['driverId_cat'] = pd.Categorical(driver_race_times_no_outliers['driverId']).codes
 
-data_for_clustering = df_race_2018[['milliseconds', 'position']]
+kmeans = KMeans(n_clusters=16)
+reshape = np.reshape(driver_race_times_no_outliers['milliseconds'].values, (-1, 1))
+kmeans.fit(reshape)
+driver_race_times_no_outliers['cluster'] = kmeans.predict(reshape)
 
-# Standardize the data
-scaler = StandardScaler()
-data_for_clustering['position'] = scaler.fit_transform(data_for_clustering[['position']])
+silhouette_avg = silhouette_score(reshape,driver_race_times_no_outliers['cluster'])
+print('Silhouette Score:', silhouette_avg)
 
-#DBSCAN
-DBSCAN_model = DBSCAN(eps=0.5, min_samples=5)
-DBSCAN_model.fit(data_for_clustering)
+chi_score = calinski_harabasz_score(reshape, driver_race_times_no_outliers['cluster'])
+print('Calinski Harabasz Score:', chi_score)
 
-labels =  DBSCAN_model.labels_
+db_score = davies_bouldin_score(reshape, driver_race_times_no_outliers['cluster'])
+print('Davies Bouldin Score:', db_score)
 
-unique_labels = set(labels) - {-1}
-colors = plt.cm.get_cmap('viridis', len(unique_labels))
+# Get unique 'driverId_cat' values that have data
+unique_driverId_cats = driver_race_times_no_outliers['driverId_cat'].unique()
 
-for label in unique_labels:
-    cluster_data = data_for_clustering[data_for_clustering['cluster'] == label]
-    plt.scatter(cluster_data['milliseconds'], cluster_data['position'], color=colors(label), label=f'Cluster {label}')
+# Set xticks to the unique 'driverId_cat' values that have data
+plt.xticks(unique_driverId_cats)
 
-outliers = data_for_clustering[data_for_clustering['cluster'] == -1]
-plt.scatter(outliers['milliseconds'], outliers['position'], color='black', label='Outliers')
+# Set xtick labels to the corresponding 'driverId' values
+plt.gca().set_xticklabels([driverId_mapping[i] for i in plt.gca().get_xticks()])
 
-plt.xlabel('Milliseconds')
-plt.ylabel('Position')
+# Plot the clusters using 'driverId_cat' for the x-axis
+plt.scatter(driver_race_times_no_outliers['raceId'], driver_race_times_no_outliers['milliseconds'], c=driver_race_times_no_outliers['cluster'], cmap='viridis')
+plt.xlabel('Q1 Time')
+plt.ylabel('Q2 Time')
+plt.legend()
+plt.title('K-Means Clustering of Q1 and Q2 times')
 
+#%%
+import plotly.graph_objects as go
+import plotly.offline as pyo
+
+# Create a trace for the scatter plot
+trace = go.Scatter(
+    x=driver_race_times_no_outliers['raceId'],
+    y=driver_race_times_no_outliers['milliseconds'],
+    mode='markers',
+    marker=dict(
+        size=10,
+        color=driver_race_times_no_outliers['cluster'],
+        colorscale='Viridis',
+        showscale=True
+    ),
+    text=driver_race_times_no_outliers.apply(
+        lambda row: f"Driver ID: {row['driverId']}<br>Race ID: {row['raceId']}<br>Lap Time: {row['milliseconds']}ms",
+        axis=1
+    ),  # Customize hover text
+    hoverinfo='text'  # Show the custom text on hover
+)
+
+# Create the layout
+layout = go.Layout(
+    title='K-Means Clustering of Race Lap Times (2018)',
+    xaxis=dict(
+        title='Race ID',
+        type='category',  # Treat Race ID as categorical
+        tickmode='array',
+        tickvals=driver_race_times_no_outliers['raceId'].unique(),  # Show all race IDs
+        ticktext=driver_race_times_no_outliers['raceId'].unique()  # Display as text labels
+    ),
+    yaxis=dict(title='Lap Time (milliseconds)'),
+)
+
+# Create the figure and add the scatter plot
+fig = go.Figure(data=[trace], layout=layout)
+
+# Show the plot
+# Show the plot
+pyo.plot(fig, filename='race_data_2018_kmeans.html')
+
+#%%
+''' Text 
+Normalizing the lap times based on the fastest lap time. Easier to compare the driver performace.
+This method  can help remove track specific biases and allow for a more accurate comparison of driver performance, but 
+is sensitive to outliers.
+'''
+fastest_lap_per_race = driver_race_times_no_outliers.groupby('raceId')['milliseconds'].min().reset_index()
+print(fastest_lap_per_race)
+fastest_lap_per_race.columns = ['raceId', 'fastest_lap']
+
+# Merge the fastest lap times with the original data
+driver_race_times_no_outliers = pd.merge(driver_race_times_no_outliers, fastest_lap_per_race, on='raceId')
+
+# Create and calculate the normalized lap time
+driver_race_times_no_outliers['normalized_lap'] = driver_race_times_no_outliers['milliseconds'] / driver_race_times_no_outliers['fastest_lap']
+
+#%%
+from sklearn.neighbors import NearestNeighbors
+import matplotlib.pyplot as plt
+
+# Reshape the 'normalized_lap' values
+normalized_lap_values = np.reshape(driver_race_times_no_outliers['normalized_lap'].values, (-1, 1))
+
+# Use the NearestNeighbors class to find the k-nearest neighbors
+nearest_neighbors = NearestNeighbors(n_neighbors=4)  # Change the value of n_neighbors to the k value you want
+nearest_neighbors.fit(normalized_lap_values)
+
+# Get the distances and indices of the k-nearest neighbors for each point
+distances, indices = nearest_neighbors.kneighbors(normalized_lap_values)
+
+# Get the distances to the kth nearest neighbor for each point
+kth_distances = distances[:, -1]
+
+# Sort the distances
+kth_distances = np.sort(kth_distances, axis=0)
+
+# Create the k-distance plot
+plt.figure(figsize=(10, 7))
+plt.plot(kth_distances)
+plt.title('K-Distance Plot')
+plt.xlabel('Points sorted by distance to kth nearest neighbor')
+plt.ylabel('kth nearest neighbor distance')
 plt.show()
+#%%
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.metrics import calinski_harabasz_score
+from sklearn.metrics import davies_bouldin_score
+from matplotlib.ticker import MaxNLocator
+
+# Create a mapping from 'driverId_cat' to 'driverId'
+driverId_mapping = dict(zip(driver_race_times_no_outliers['driverId_cat'], driver_race_times_no_outliers['driverId']))
+# Create a new column 'driverId_cat' that represents the categorical version of 'driverId'
+driver_race_times_no_outliers['driverId_cat'] = pd.Categorical(driver_race_times_no_outliers['driverId']).codes
+
+kmeans = KMeans(n_clusters=17)
+reshape = np.reshape(driver_race_times_no_outliers['normalized_lap'].values, (-1, 1))
+kmeans.fit(reshape)
+driver_race_times_no_outliers['cluster'] = kmeans.predict(reshape)
+
+silhouette_avg = silhouette_score(reshape,driver_race_times_no_outliers['cluster'])
+print('Silhouette Score:', silhouette_avg)
+
+chi_score = calinski_harabasz_score(reshape, driver_race_times_no_outliers['cluster'])
+print('Calinski Harabasz Score:', chi_score)
+
+db_score = davies_bouldin_score(reshape, driver_race_times_no_outliers['cluster'])
+print('Davies Bouldin Score:', db_score)
+#Get unique 'driverId_cat' values that have data
+unique_driverId_cats = driver_race_times_no_outliers['driverId_cat'].unique()
+#Plot the clusters using 'driverId_cat' for the x-axis
+plt.scatter(driver_race_times_no_outliers['raceId'], driver_race_times_no_outliers['milliseconds'], c=driver_race_times_no_outliers['cluster'], cmap='viridis')
+plt.xlabel('Race Id')
+plt.ylabel('Lap Time')
+plt.legend()
+plt.title('K-Means Clustering of Q1 and Q2 times')
