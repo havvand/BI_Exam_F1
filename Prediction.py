@@ -85,7 +85,7 @@ all_merged_data2 = all_merged_data2.fillna(0)  # Example: Fill with 0
 target_variable = 'position'  # Example
 
 # 4. Split Data into Training and Testing Sets:
-X = all_merged_data[features]
+X = all_merged_data2[features]
 y = all_merged_data[target_variable]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
